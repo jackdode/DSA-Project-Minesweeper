@@ -1,3 +1,9 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    box-sizing: border-box;
+}
 body {
     display: flex;
     justify-content: center;
@@ -17,6 +23,8 @@ body {
     background-color: #999;
     padding: 5px;
     border-radius: 5px;
+    margin: 0 auto; 
+    width: fit-content;
 }
 .cell {
     width: 40px;
@@ -25,4 +33,16 @@ body {
     border: 2px solid #fff;
     border-bottom-color: #999;
     border-right-color: #999;
-}    
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center; 
+}
+.cell.revealed {
+    background-color: #bbb;
+    border: 1px solid #aaa;
+    box-shadow: none;
+}
+
