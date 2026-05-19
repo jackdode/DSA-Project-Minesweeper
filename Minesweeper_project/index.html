@@ -2,18 +2,23 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Minesweeper</title>
+    <title>Minesweeper IU Project</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="game-container">
-        
         <h1>MINESWEEPER IU PROJECT</h1>
         
-        <div id="board"></div> 
-        
-    </div>
+        <div class="status-bar">
+            <div>Cells Cleared: <span id="score">0</span>/90</div>
+            <button id="btn-undo">⏪ Undo</button>
+            <button id="btn-reset">🔄 Reset</button>
+        </div>
 
+        <div id="board"></div> 
+
+        <div id="message"></div>
+    </div>
     <script src="script.js"></script>
 </body>
 </html>
