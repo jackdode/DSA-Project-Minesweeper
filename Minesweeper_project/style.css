@@ -1,7 +1,6 @@
 * {
     margin: 0;
     padding: 0;
-    box-shadow: none;
     box-sizing: border-box;
 }
 body {
@@ -9,11 +8,42 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
-    background-color: #9500ff;
+    background-color: #f0f0f0;
     font-family: Arial, sans-serif;
 }
 .game-container {
     text-align: center;
+    background-color: #a020f0; 
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+h1 {
+    color: white;
+    margin-bottom: 15px;
+    font-size: 24px;
+}
+/* Thanh trạng thái phía trên bàn cờ */
+.status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    color: white;
+    font-weight: bold;
+    font-size: 16px;
+}
+button {
+    padding: 6px 12px;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    background-color: white;
+    color: #333;
+}
+button:hover {
+    background-color: #ddd;
 }
 #board {
     display: grid;
@@ -23,7 +53,7 @@ body {
     background-color: #999;
     padding: 5px;
     border-radius: 5px;
-    margin: 0 auto; 
+    margin: 0 auto;
     width: fit-content;
 }
 .cell {
@@ -38,17 +68,22 @@ body {
     font-size: 16px;
     display: flex;
     justify-content: center;
-    align-items: center; 
+    align-items: center;
 }
 .cell.revealed {
     background-color: #bbb;
     border: 1px solid #aaa;
-    box-shadow: none;
 }
 .cell.mine {
-    background-color: #ff0019; 
+    background-color: #ffcdd2;
 }
-
 .cell:not(.revealed):hover {
     background-color: #ccc;
+}
+/* thông báo kết quả */
+#message {
+    margin-top: 15px;
+    font-size: 22px;
+    font-weight: bold;
+    height: 30px;
 }
