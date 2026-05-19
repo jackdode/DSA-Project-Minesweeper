@@ -45,4 +45,10 @@ body {
     border: 1px solid #aaa;
     box-shadow: none;
 }
+.cell.mine {
+    background-color: #ff0019; 
+}
 
+.cell:not(.revealed):hover {
+    background-color: #ccc;
+}
