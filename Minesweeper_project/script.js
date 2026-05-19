@@ -3,13 +3,22 @@ const COLS = 10;
 const MINE_COUNT = 10;
 
 let board = [];
-const boardElement = document.getElementById('board');
+let gameOver = false;
+let historyStack = []; // DSA: Cấu trúc dữ liệu Stack để lưu lịch sử làm nút Undo
 
+const boardElement = document.getElementById('board');
+const scoreElement = document.getElementById('score');
+const messageElement = document.getElementById('message');
+
+// 1. Khởi tạo ván game mới
 function initGame() {
     board = [];
-    boardElement.innerHTML = '';
+    gameOver = false;
+    historyStack = []; // Reset bộ nhớ Stack
+    messageElement.innerText = '';
+    scoreElement.innerText = '0';
 
-    // Tạo mảng 2 chiều ngầm
+    // Tạo ma trận 10x10 ngầm
     for (let r = 0; r < ROWS; r++) {
         let row = [];
         for (let c = 0; c < COLS; c++) {
@@ -39,6 +48,7 @@ function initGame() {
     renderBoardUI();
 }
 
+// Tính số lượng mìn xung quanh 8 ô lân cận
 function calculateNeighbors() {
     for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
@@ -58,6 +68,12 @@ function calculateNeighbors() {
     }
 }
 
+// DSA: Lưu trạng thái hiện tại vào Stack trước khi người chơi thực hiện bước đi mới (Push)
+function saveHistory() {
+    historyStack.push(JSON.parse(JSON.stringify(board)));
+}
+
+// Vẽ giao diện bàn cờ dựa trên mảng dữ liệu ngầm
 function renderBoardUI() {
     boardElement.innerHTML = '';
     for (let r = 0; r < ROWS; r++) {
@@ -65,15 +81,23 @@ function renderBoardUI() {
             const cell = board[r][c];
             const cellElement = document.createElement('button');
             cellElement.classList.add('cell');
-            cellElement.dataset.row = r;
-            cellElement.dataset.col = c;
+            
+            // Đồng bộ trạng thái từ mảng dữ liệu lên giao diện (Rất quan trọng cho tính năng Undo)
+            if (cell.isRevealed) {
+                cellElement.classList.add('revealed');
+                if (cell.isMine) {
+                    cellElement.classList.add('mine');
+                    cellElement.innerText = '💣';
+                } else if (cell.neighborMines > 0) {
+                    cellElement.innerText = cell.neighborMines;
+                }
+            } else if (cell.isFlagged) {
+                cellElement.innerText = '🚩';
+            }
 
-            // 1. Click chuột trái để mở ô
             cellElement.addEventListener('click', () => handleCellClick(r, c));
-
-            // 2. Click chuột phải để cắm cờ 🚩
             cellElement.addEventListener('contextmenu', (e) => {
-                e.preventDefault(); // Chặn không cho hiện bảng menu mặc định của trình duyệt
+                e.preventDefault();
                 handleCellRightClick(r, c);
             });
 
@@ -82,66 +106,106 @@ function renderBoardUI() {
     }
 }
 
-// Hàm xử lý Chuột trái (Mở ô)
+// Xử lý khi người chơi click chuột trái mở ô
 function handleCellClick(r, c) {
-    let cell = board[r][c];
-    // Nếu ô đã mở hoặc đang cắm cờ thì không cho bấm chuột trái
-    if (cell.isRevealed || cell.isFlagged) return; 
+    if (gameOver || board[r][c].isRevealed || board[r][c].isFlagged) return;
 
-    // Gọi thuật toán loang đệ quy để mở ô
-    revealCell(r, c);
+    saveHistory(); // Nhét trạng thái cũ vào Stack trước khi thay đổi dữ liệu
+
+    if (board[r][c].isMine) {
+        triggerGameOver(false); // Bốc trúng mìn -> Thua
+        return;
+    }
+
+    revealCell(r, c); // Gọi hàm loang đệ quy
+    checkWinCondition(); // Kiểm tra xem thắng chưa
+    renderBoardUI(); // Vẽ lại giao diện mới
 }
 
-// DSA: THUẬT TOÁN LOANG BẰNG ĐỆ QUY (Flood Fill / DFS)
+// Thuật toán Loang Đệ quy (DFS)
 function revealCell(r, c) {
-    // Điều kiện dừng đệ quy: Nếu lọt ra ngoài biên, hoặc ô đã mở, hoặc ô đang cắm cờ
     if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
-    if (board[r][c].isRevealed || board[r][c].isFlagged) return;
+    if (board[r][c].isRevealed || board[r][c].isFlagged || board[r][c].isMine) return;
 
-    // Đánh dấu ô đã mở
     board[r][c].isRevealed = true;
-    updateSingleCellUI(r, c);
 
-    // Nếu ô này trúng mìn hoặc ô này có số (> 0) thì DỪNG LOANG
-    if (board[r][c].isMine || board[r][c].neighborMines > 0) return;
+    if (board[r][c].neighborMines > 0) return;
 
-    // Nếu trúng ô trống (0 mìn xung quanh), tự động loang sang 8 ô hàng xóm
     for (let i = -1; i <= 1; i++) {
         for (let j = -1; j <= 1; j++) {
-            revealCell(r + i, c + j); // Đệ quy gọi lại chính nó
+            revealCell(r + i, c + j);
         }
     }
 }
 
-// Hàm xử lý Chuột phải (Cắm cờ / Bỏ cắm cờ)
+// Xử lý khi người chơi click chuột phải cắm cờ
 function handleCellRightClick(r, c) {
-    let cell = board[r][c];
-    if (cell.isRevealed) return; // Ô mở rồi thì không cắm cờ được nữa
+    if (gameOver || board[r][c].isRevealed) return;
 
-    cell.isFlagged = !cell.isFlagged; // Đảo trạng thái cắm cờ (true thành false, false thành true)
-    updateSingleCellUI(r, c);
+    saveHistory(); // Nhét trạng thái cũ vào Stack trước khi cắm cờ
+
+    board[r][c].isFlagged = !board[r][c].isFlagged;
+    renderBoardUI();
 }
 
-// Hàm cập nhật hình ảnh cho duy nhất một ô cờ tại tọa độ (r, c)
-function updateSingleCellUI(r, c) {
-    let cell = board[r][c];
-    const cellElement = boardElement.querySelector(`[data-row="${r}"][data-col="${c}"]`);
-    
-    if (cell.isRevealed) {
-        cellElement.classList.add('revealed');
-        if (cell.isMine) {
-            cellElement.classList.add('mine');
-            cellElement.innerText = '💣';
-        } else if (cell.neighborMines > 0) {
-            cellElement.innerText = cell.neighborMines;
-        } else {
-            cellElement.innerText = '';
-        }
+// Xử lý kết thúc game (Thắng hoặc Thua)
+function triggerGameOver(isWin) {
+    gameOver = true;
+    if (isWin) {
+        messageElement.innerText = 'YOU WIN! 🎉';
+        messageElement.style.color = '#4caf50'; // Chữ màu xanh lá
     } else {
-        // Nếu chưa mở thì hiển thị Cờ hoặc để trống
-        cellElement.classList.remove('revealed');
-        cellElement.innerText = cell.isFlagged ? '🚩' : '';
+        messageElement.innerText = 'GAME OVER! 💥';
+        messageElement.style.color = '#f44336'; // Chữ màu đỏ
+        // Hiển thị vị trí của toàn bộ quả mìn trên bàn cờ cho người chơi thấy
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                if (board[r][c].isMine) board[r][c].isRevealed = true;
+            }
+        }
+        renderBoardUI();
     }
 }
 
+// Kiểm tra điều kiện thắng
+function checkWinCondition() {
+    let revealedCount = 0;
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            if (board[r][c].isRevealed && !board[r][c].isMine) revealedCount++;
+        }
+    }
+    scoreElement.innerText = revealedCount;
+
+    // Tổng số 100 ô trừ 10 quả mìn = 90 ô an toàn cần mở để thắng
+    if (revealedCount === (ROWS * COLS) - MINE_COUNT) {
+        triggerGameOver(true);
+    }
+}
+
+// DSA: Hàm xử lý nút Hoàn tác - Undo (Pop từ Stack ra)
+function handleUndo() {
+    if (historyStack.length === 0) return; // Nếu Stack rỗng thì không làm gì cả
+
+    board = historyStack.pop(); // Lấy trạng thái gần nhất ra khỏi Stack và đè lại lên bàn cờ hiện tại
+    gameOver = false;           // Mở khóa lại trạng thái game phòng khi đang bị Game Over
+    messageElement.innerText = '';
+    
+    // Tính toán lại điểm số sau khi quay ngược thời gian
+    let revealedCount = 0;
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            if (board[r][c].isRevealed && !board[r][c].isMine) revealedCount++;
+        }
+    }
+    scoreElement.innerText = revealedCount;
+
+    renderBoardUI(); // Vẽ lại giao diện bàn cờ cũ
+}
+
+// Chạy khởi tạo game
 initGame();
+
+// Lắng nghe sự kiện cho 2 nút điều khiển trên thanh trạng thái
+document.getElementById('btn-reset').addEventListener('click', initGame);
+document.getElementById('btn-undo').addEventListener('click', handleUndo);
