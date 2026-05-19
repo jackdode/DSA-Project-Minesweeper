@@ -5,58 +5,49 @@ const MINE_COUNT = 10;
 let board = [];
 const boardElement = document.getElementById('board');
 
-// 1. Hàm khởi tạo game (Chạy ngay khi mở trang web)
 function initGame() {
     board = [];
     boardElement.innerHTML = '';
 
-    // DSA: Tạo mảng 2 chiều (Matrix) để quản lý 100 ô vuông ngầm trong bộ nhớ
+    // Tạo mảng 2 chiều ngầm
     for (let r = 0; r < ROWS; r++) {
         let row = [];
         for (let c = 0; c < COLS; c++) {
             row.push({
                 r: r, c: c,
-                isMine: false,         // Có mìn hay không?
-                neighborMines: 0,      // Số mìn xung quanh ô này
-                isRevealed: false,     // Ô này đã được mở chưa?
-                isFlagged: false       // Có cắm cờ không?
+                isMine: false,
+                neighborMines: 0,
+                isRevealed: false,
+                isFlagged: false
             });
         }
         board.push(row);
     }
 
-    // 2. Rải 10 quả mìn ngẫu nhiên vào mảng ngầm
+    // Rải mìn ngẫu nhiên
     let minesPlanted = 0;
     while (minesPlanted < MINE_COUNT) {
         let r = Math.floor(Math.random() * ROWS);
         let c = Math.floor(Math.random() * COLS);
-        
         if (!board[r][c].isMine) {
             board[r][c].isMine = true;
             minesPlanted++;
         }
     }
 
-    // 3. Tính số mìn lân cận cho từng ô
     calculateNeighbors();
-    
-    // 4. Vẽ các ô cờ (biến thành các nút Button) lên màn hình
     renderBoardUI();
 }
 
-// Hàm quét 8 ô xung quanh để đếm mìn (Thuật toán duyệt cơ bản)
 function calculateNeighbors() {
     for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
             if (board[r][c].isMine) continue;
-            
             let count = 0;
-            // Vòng lặp quét các ô hàng xóm chung quanh từ -1 đến +1
             for (let i = -1; i <= 1; i++) {
                 for (let j = -1; j <= 1; j++) {
                     let newR = r + i;
                     let newC = c + j;
-                    // Điều kiện đảm bảo không quét lọt ra ngoài biên bàn cờ
                     if (newR >= 0 && newR < ROWS && newC >= 0 && newC < COLS) {
                         if (board[newR][newC].isMine) count++;
                     }
@@ -67,7 +58,6 @@ function calculateNeighbors() {
     }
 }
 
-// Hàm tạo các nút bấm (Button) thay vì thẻ div để người chơi tương tác được
 function renderBoardUI() {
     boardElement.innerHTML = '';
     for (let r = 0; r < ROWS; r++) {
@@ -75,47 +65,83 @@ function renderBoardUI() {
             const cell = board[r][c];
             const cellElement = document.createElement('button');
             cellElement.classList.add('cell');
-            
-            // Lưu tọa độ ngầm vào nút để lát nữa biết chính xác ô nào được click
             cellElement.dataset.row = r;
             cellElement.dataset.col = c;
 
-            // Lắng nghe sự kiện click chuột trái của người chơi
+            // 1. Click chuột trái để mở ô
             cellElement.addEventListener('click', () => handleCellClick(r, c));
+
+            // 2. Click chuột phải để cắm cờ 🚩
+            cellElement.addEventListener('contextmenu', (e) => {
+                e.preventDefault(); // Chặn không cho hiện bảng menu mặc định của trình duyệt
+                handleCellRightClick(r, c);
+            });
 
             boardElement.appendChild(cellElement);
         }
     }
 }
 
-// 5. Hàm xử lý khi người chơi Click chuột trái
+// Hàm xử lý Chuột trái (Mở ô)
 function handleCellClick(r, c) {
     let cell = board[r][c];
-    if (cell.isRevealed) return; // Nếu ô đã mở rồi thì bỏ qua không xử lý
+    // Nếu ô đã mở hoặc đang cắm cờ thì không cho bấm chuột trái
+    if (cell.isRevealed || cell.isFlagged) return; 
 
-    cell.isRevealed = true; // Đánh dấu ô này đã mở ngầm trong bộ nhớ
-
-    // Cập nhật giao diện hình ảnh của ô đó ngay lập tức
-    updateUIAfterClick(r, c);
+    // Gọi thuật toán loang đệ quy để mở ô
+    revealCell(r, c);
 }
 
-// Hàm phụ trách thay đổi giao diện của ô trên màn hình dựa vào trạng thái ẩn
-function updateUIAfterClick(r, c) {
-    let cell = board[r][c];
-    // Tìm đúng cái nút bấm trên giao diện có tọa độ tương ứng (r, c)
-    const cellElement = boardElement.querySelector(`[data-row="${r}"][data-col="${c}"]`);
-    
-    cellElement.classList.add('revealed'); // Đổi màu nền sang phẳng (đã mở)
+// DSA: THUẬT TOÁN LOANG BẰNG ĐỆ QUY (Flood Fill / DFS)
+function revealCell(r, c) {
+    // Điều kiện dừng đệ quy: Nếu lọt ra ngoài biên, hoặc ô đã mở, hoặc ô đang cắm cờ
+    if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
+    if (board[r][c].isRevealed || board[r][c].isFlagged) return;
 
-    if (cell.isMine) {
-        cellElement.classList.add('mine'); // Tô nền đỏ cho ô chứa mìn
-        cellElement.innerText = '💣';
-    } else if (cell.neighborMines > 0) {
-        cellElement.innerText = cell.neighborMines; // Hiện con số mìn xung quanh
-    } else {
-        cellElement.innerText = ''; // Nếu xung quanh có 0 quả mìn thì để trống
+    // Đánh dấu ô đã mở
+    board[r][c].isRevealed = true;
+    updateSingleCellUI(r, c);
+
+    // Nếu ô này trúng mìn hoặc ô này có số (> 0) thì DỪNG LOANG
+    if (board[r][c].isMine || board[r][c].neighborMines > 0) return;
+
+    // Nếu trúng ô trống (0 mìn xung quanh), tự động loang sang 8 ô hàng xóm
+    for (let i = -1; i <= 1; i++) {
+        for (let j = -1; j <= 1; j++) {
+            revealCell(r + i, c + j); // Đệ quy gọi lại chính nó
+        }
     }
 }
 
-// Chạy khởi tạo game ngay khi load trang
+// Hàm xử lý Chuột phải (Cắm cờ / Bỏ cắm cờ)
+function handleCellRightClick(r, c) {
+    let cell = board[r][c];
+    if (cell.isRevealed) return; // Ô mở rồi thì không cắm cờ được nữa
+
+    cell.isFlagged = !cell.isFlagged; // Đảo trạng thái cắm cờ (true thành false, false thành true)
+    updateSingleCellUI(r, c);
+}
+
+// Hàm cập nhật hình ảnh cho duy nhất một ô cờ tại tọa độ (r, c)
+function updateSingleCellUI(r, c) {
+    let cell = board[r][c];
+    const cellElement = boardElement.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+    
+    if (cell.isRevealed) {
+        cellElement.classList.add('revealed');
+        if (cell.isMine) {
+            cellElement.classList.add('mine');
+            cellElement.innerText = '💣';
+        } else if (cell.neighborMines > 0) {
+            cellElement.innerText = cell.neighborMines;
+        } else {
+            cellElement.innerText = '';
+        }
+    } else {
+        // Nếu chưa mở thì hiển thị Cờ hoặc để trống
+        cellElement.classList.remove('revealed');
+        cellElement.innerText = cell.isFlagged ? '🚩' : '';
+    }
+}
+
 initGame();
