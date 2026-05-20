@@ -68,7 +68,7 @@ function calculateNeighbors() {
     }
 }
 
-// DSA: Lưu trạng thái hiện tại vào Stack trước khi người chơi thực hiện bước đi mới (Push)
+// DSA: Lưu trạng thái hiện tại vào Stack trước khi player thực hiện bước đi mới (Push)
 function saveHistory() {
     historyStack.push(JSON.parse(JSON.stringify(board)));
 }
@@ -82,7 +82,7 @@ function renderBoardUI() {
             const cellElement = document.createElement('button');
             cellElement.classList.add('cell');
             
-            // Đồng bộ trạng thái từ mảng dữ liệu lên giao diện (Rất quan trọng cho tính năng Undo)
+            // Đồng bộ trạng thái từ mảng dữ liệu lên giao diện ( tính năng Undo )
             if (cell.isRevealed) {
                 cellElement.classList.add('revealed');
                 if (cell.isMine) {
@@ -183,7 +183,7 @@ function checkWinCondition() {
     }
 }
 
-// DSA: Hàm xử lý nút Hoàn tác - Undo (Pop từ Stack ra)
+// DSA:  Undo (Pop từ Stack ra)
 function handleUndo() {
     if (historyStack.length === 0) return; // Nếu Stack rỗng thì không làm gì cả
 
